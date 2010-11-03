@@ -48,7 +48,7 @@ function checking_dependencies() {
  * @todo improve the desing of this message
  */
 function mf_wpml_notices() {
-  echo "You need install first Magic Fields and WPML for use this plugin";
+  echo "<div class=\"mf_message error\">You need install first Magic Fields and WPML Multilingual CMS for use this plugin</div>";
 }
 
 add_action('init','checking_dependencies');
@@ -59,16 +59,6 @@ add_action('init','checking_dependencies');
  */ 
 add_action('admin_print_scripts','mfwpml_scripts');
 
-/** 
- * In the manage posts screen WPML display a new column for add translation for the post
- * when the lists belongs to a writepanel the wplm links are broken, this function fix that
- */ 
-function fixing_mf_url($column_name,$id) {
-  if($column_name == "icl_translations") {
-    print_r($id);
-  }
-}
-
 /**
  * 
  */
@@ -78,7 +68,45 @@ function mfwpml_scripts() {
   $types = array('edit.php','edit-pages.php','edit.php?post_type=page');
 
   if(in_array($parent_file,$types)) {
-    //loading core of the datepicker
     wp_enqueue_script('mfwpml',plugins_url('js/mfpluswpml_edit.js',__FILE__,array('jquery')));
   }
- }
+}
+
+
+/**
+ * Magic Fields Api Implementation
+ */
+
+// Filter for alter the textbox
+
+/** 
+ * using the same values of the original post 
+ * for the translated one
+ */
+add_filter('mf_source_post_data','get_info');
+function get_info($post_id) {
+  global $wpdb;
+
+  //Getting the source of the post_id
+  if(isset($_GET['trid']) && is_numeric($_GET['trid']) && empty($_GET['post'])) {
+    $post_id = $wpdb->get_var($wpdb->prepare("SELECT  element_id FROM  {$wpdb->prefix}icl_translations WHERE trid={$_GET['trid']}"));
+  }
+  return $post_id;
+}
+
+
+/**
+ * Cleaning translatable fields
+ * 
+ */
+//textfield 
+//multiline field
+add_filter('mf_multiline_value','clean_textbox');
+add_filter('mf_textbox_value','clean_textbox');
+function clean_textbox($value,$groupCounter = null,$fieldCounter = null) {
+  
+  if(isset($_GET['trid']) && is_numeric($_GET['trid']) && empty($_GET['post'])) {
+    $value = "";
+  }
+  return $value;
+}
