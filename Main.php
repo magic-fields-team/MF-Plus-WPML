@@ -94,19 +94,26 @@ function get_info($post_id) {
   return $post_id;
 }
 
+//Keeping update the custom fields between translated posts
+add_action('mf_presave','mfplus_update_values',10,6);
 
-/**
- * Cleaning translatable fields
- * 
- */
-//textfield 
-//multiline field
-add_filter('mf_multiline_value','clean_textbox');
-add_filter('mf_textbox_value','clean_textbox');
-function clean_textbox($value,$groupCounter = null,$fieldCounter = null) {
-  
-  if(isset($_GET['trid']) && is_numeric($_GET['trid']) && empty($_GET['post'])) {
-    $value = "";
+function mfplus_update_values($field_meta_id,$name,$group_index,$field_index,$post_id,$value_field){
+  global $wpdb;
+
+  //looking for the translated version of the post
+  $trid = $wpdb->get_var($wpdb->prepare("SELECT trid FROM {$wpdb->prefix}icl_translations WHERE element_id = {$post_id} AND (element_type = 'post_post' OR element_type = 'post_page')"));
+
+  //Getting the ID's of the translatable fields
+  $ids = $wpdb->get_results("SELECT element_id FROM {$wpdb->prefix}icl_translations  WHERE trid = {$trid} AND element_id != {$post_id}");
+
+  if(empty($ids)){
+    return true;
   }
-  return $value;
+
+  //getting the meta_id  of the translated field
+  foreach($ids as $value) {
+    $meta_id = $wpdb->get_var($wpdb->prepare("SELECT id FROM ".MF_TABLE_POST_META." WHERE post_id = {$value->element_id} AND field_name = '{$name}' AND group_count = {$group_index} AND field_count = {$field_index} AND order_id = {$group_index}"));
+    //updating the field value
+    update_post_meta($value->element_id,$name,$value_field); 
+  }
 }
