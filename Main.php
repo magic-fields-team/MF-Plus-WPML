@@ -121,8 +121,22 @@ function mfplus_update_values($field_meta_id,$name,$group_index,$field_index,$po
     if(in_array($writepanel_id."_".$name,$translatables)){
       //@todo use the GetMetaID for get the meta_id instead of this query 
       $meta_id = $wpdb->get_var($wpdb->prepare("SELECT id FROM ".MF_TABLE_POST_META." WHERE post_id = {$value->element_id} AND field_name = '{$name}' AND group_count = {$group_index} AND field_count = {$field_index} AND order_id = {$group_index}"));
+
+      //getting the old meta value
+      $old_value = $wpdb->get_var($wpdb->prepare("SELECT meta_value FROM ".$wpdb->prefix."postmeta WHERE meta_id = ".$meta_id));
       //updating the field value
-      update_post_meta($value->element_id,$name,$value_field); 
+      if($old_value) {
+        update_post_meta($value->element_id,$name,$value_field,$old_value); 
+      }else {
+        add_post_meta($value->element_id,$name,$value_field);  
+				$meta_id = $wpdb->insert_id;
+
+        // Adding  the referencie in the magic fields post meta table
+				$wpdb->query("INSERT INTO ". MF_TABLE_POST_META .
+				  					" (id, field_name, group_count, field_count, post_id,order_id) ".
+										" VALUES ({$meta_id}, '{$name}',{$group_index},{$field_index},{$value->element_id},{$group_index})"
+									);
+      }
     }
   }
 }
