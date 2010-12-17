@@ -244,6 +244,49 @@ function save_translatable_fields(){
   );
 }
 
+
+add_action('save_post','mfpluswpml_delete_extras',11);
+function mfpluswpml_delete_extras($postId) {
+  global $flag,$wpdb;
+  if($flag != 1) {
+    return $postId;
+  }
+
+  if ( $the_post = wp_is_post_revision($postId)) {
+    $postId = $the_post;
+  }
+
+
+  if(!empty($_REQUEST['rc-custom-write-panel-verify-key'])) {
+  	if (!(current_user_can('edit_posts', $postId) || current_user_can('edit_published_pages', $postId))){
+	     return $postId;
+    }
+  }
+
+  //looking for the translated version of the post
+  $trid = $wpdb->get_var($wpdb->prepare("SELECT trid FROM {$wpdb->prefix}icl_translations WHERE element_id = {$postId} AND (element_type = 'post_post' OR element_type = 'post_page')"));
+
+  //Getting the ID's of the translatable fields
+  $ids = $wpdb->get_results("SELECT element_id FROM {$wpdb->prefix}icl_translations  WHERE trid = {$trid} AND element_id != {$postId}");
+
+  $extra_meta_ids = array();
+  foreach($ids as $k => $v) {
+    $tmp = $wpdb->get_results("select id from wp_mf_post_meta c WHERE c.post_id in (".$postId.",".$v->element_id.") AND id NOT IN (select a.id from wp_mf_post_meta a , wp_mf_post_meta b WHERE a.post_id = ".$v->element_id." AND b.post_id = ".$postId." AND a.field_name = b.field_name AND a.group_count = b.group_count AND a.field_count = b.field_count AND a.order_id = b.order_id UNION select a.id from wp_mf_post_meta a , wp_mf_post_meta b WHERE a.post_id = ".$postId." AND b.post_id = ".$v->element_id." AND a.field_name = b.field_name AND a.group_count = b.group_count AND a.field_count = b.field_count AND a.order_id = b.order_id)");
+    foreach($tmp as $z => $y) {
+      $extra_meta_ids[] = $y->id;
+    }  
+
+
+    $meta_id = implode(",",$extra_meta_ids);
+
+    //deleting references for add the new data when the post be saved
+    $wpdb->query("DELETE FROM ".$wpdb->prefix."postmeta WHERE meta_id IN (".$meta_id.")");
+    $wpdb->query("DELETE FROM ".MF_TABLE_POST_META." WHERE id iN (".$meta_id.")");  
+
+
+  }
+}
+
 add_action('save_post','mfpluswpml_save_post',9);
 function mfpluswpml_save_post($postId) {
   global $flag,$wpdb;
