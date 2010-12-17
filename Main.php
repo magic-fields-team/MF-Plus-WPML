@@ -127,6 +127,21 @@ function mfplus_update_values($field_meta_id,$name,$group_index,$field_index,$po
 			  " (id, field_name, group_count, field_count, post_id,order_id) ".
 			  " VALUES ({$meta_id}, '{$name}',{$group_index},{$field_index},{$value->element_id},{$group_index})"
 	    );
+    }else{
+      $exists =  $wpdb->get_var("SELECT count(1) FROM ". MF_TABLE_POST_META .
+			  " WHERE field_name = '{$name}' AND group_count = {$group_index} AND  field_count = {$field_index} AND  post_id = {$value->element_id} AND order_id = {$group_index}");
+
+      //if don exist we will insert this field with a black value
+      if(!$exists) {
+        add_post_meta($value->element_id,$name,"");  
+  			$meta_id = $wpdb->insert_id;
+
+        // Adding  the referencie in the magic fields post meta table
+		  	$wpdb->query("INSERT INTO ". MF_TABLE_POST_META .
+			    " (id, field_name, group_count, field_count, post_id,order_id) ".
+			    " VALUES ({$meta_id}, '{$name}',{$group_index},{$field_index},{$value->element_id},{$group_index})"
+  	    );
+      }
     }
   }
 }
