@@ -3,7 +3,7 @@
 Plugin Name: MF Plus WPML
 Plugin URI: http://magicfields.org
 Description: This plugin provide a integration between magic fields and WPML
-Versio: 1
+Version: 1.1
 Author: Magic Fields Team
 Author URI: http://magicfields.org
 Licence: GPL2

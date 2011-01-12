@@ -17,5 +17,9 @@ Follow The following steps to install this plugin
 2. Put the plugin into the plugins folder
 3. Activate the plugin through the 'Plugins' menu in Wordpress
 
+### 1.1 ###
+
+* Fix in translations where exists a duplicable group and field
+
 ### 1.0 ###
 First release
