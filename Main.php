@@ -3,7 +3,7 @@
 Plugin Name: MF Plus WPML
 Plugin URI: http://magicfields.org
 Description: This plugin provide a integration between magic fields and WPML
-Versio: 1
+Versio: 1.2
 Author: Magic Fields Team
 Author URI: http://magicfields.org
 Licence: GPL2
@@ -164,7 +164,7 @@ function mfplus_translatable_fields_admin() {
   print "<p>Select which Custom Fields will be keep sync between translated posts</p>";
   print "</div>";
 
-  if($_GET['saved_translatable_fields'] == "true"): ?>
+  if(!empty($_GET['saved_translatable_fields']) && $_GET['saved_translatable_fields'] == "true"): ?>
       <div id="message" class="updated">
         <strong>Translatable fields saved</strong>
       </div>
@@ -215,7 +215,7 @@ function mfplus_translatable_fields_admin() {
 }
 
 function mf_translatable_admin(){
-    add_submenu_page('MagicFieldsMenu','Translatable Fields','Translatable Fields',10,'translatablefields','mfplus_translatable_fields_admin');
+    add_submenu_page('MagicFieldsMenu','Translatable Fields','Translatable Fields','edit_pages','translatablefields','mfplus_translatable_fields_admin');
 }
 
 
