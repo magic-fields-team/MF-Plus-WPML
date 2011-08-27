@@ -84,9 +84,8 @@ function mfwpml_scripts() {
  * for the translated one
  */
 add_filter('mf_source_post_data','get_info');
-function get_info($post_id) {
+function get_info($post_id = null) {
   global $wpdb;
-
   //Getting the source of the post_id
   if(isset($_GET['trid']) && is_numeric($_GET['trid']) && empty($_GET['post'])) {
     $post_id = $wpdb->get_var($wpdb->prepare("SELECT  element_id FROM  {$wpdb->prefix}icl_translations WHERE trid={$_GET['trid']}"));
@@ -265,6 +264,10 @@ function mfpluswpml_delete_extras($postId) {
 
   //looking for the translated version of the post
   $trid = $wpdb->get_var($wpdb->prepare("SELECT trid FROM {$wpdb->prefix}icl_translations WHERE element_id = {$postId} AND (element_type = 'post_post' OR element_type = 'post_page')"));
+
+  if(is_null($trid)) {
+    return false;
+  }
 
   //Getting the ID's of the translatable fields
   $ids = $wpdb->get_results("SELECT element_id FROM {$wpdb->prefix}icl_translations  WHERE trid = {$trid} AND element_id != {$postId}");
