@@ -367,26 +367,27 @@ function mfwpml_add_categories($categories) {
   $source_lang = $_GET['source_lang'];
   $translated_ids = array();
   foreach( $categories as $key => $item ) {
-    $id = $wpdb->get_row( $wpdb->prepare("SELECT  
-        l.element_id as id  
+    $query = $wpdb->prepare(
+      "SELECT 
+        t.element_id
       FROM 
-        wp_icl_translations  as o  
-      LEFT JOIN  
-        wp_icl_translations as l 
-      ON 
-        ( o.translation_id = l.trid) 
-      WHERE 
-        l.source_language_code = %s 
-      AND 
-        l.language_code = %s 
-      AND 
-        o.element_id = %d
-      ",$source_lang, $lang, $item
-    ), ARRAY_A);
-    
-    if( !empty($id) ) {
-      $categories[$key] = $id['id'];  
+        ".$wpdb->prefix."icl_translations as f
+      LEFT JOIN 
+        ".$wpdb->prefix."icl_translations as t
+      ON
+        ( f.trid = t.trid AND t.source_language_code = %s AND t.language_code = %s AND t.element_type = 'tax_category' )
+      WHERE
+        f.element_id = %d 
+      ", $source_lang, $lang, $item
+    );
+
+    $term = $wpdb->get_var($query);
+
+    if(empty($term)) {
+      continue;
     }
+
+    $categories[$key] = $term;
   }
 
   return $categories;
