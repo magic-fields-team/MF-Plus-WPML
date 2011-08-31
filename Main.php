@@ -351,3 +351,43 @@ function mfpluswpml_save_post($postId) {
 function get_custom_field_name(&$item) {
   $item =  preg_replace("/[0-9]+\_/i","",$item);
 }
+
+/**
+ * Translating taxonomies
+ */
+add_filter('mf_extra_categories','mfwpml_add_categories');
+function mfwpml_add_categories($categories) {
+  global $wpdb;
+
+  if( empty($_GET['lang']) || empty($_GET['source_lang']) || empty( $categories ) ) {
+    return $categories;
+  }
+
+  $lang = $_GET['lang'];
+  $source_lang = $_GET['source_lang'];
+  $translated_ids = array();
+  foreach( $categories as $key => $item ) {
+    $id = $wpdb->get_row( $wpdb->prepare("SELECT  
+        l.element_id as id  
+      FROM 
+        wp_icl_translations  as o  
+      LEFT JOIN  
+        wp_icl_translations as l 
+      ON 
+        ( o.translation_id = l.trid) 
+      WHERE 
+        l.source_language_code = %s 
+      AND 
+        l.language_code = %s 
+      AND 
+        o.element_id = %d
+      ",$source_lang, $lang, $item
+    ), ARRAY_A);
+    
+    if( !empty($id) ) {
+      $categories[$key] = $id['id'];  
+    }
+  }
+
+  return $categories;
+}
