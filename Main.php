@@ -247,6 +247,14 @@ function save_translatable_fields(){
 add_action('save_post','mfpluswpml_delete_extras',11);
 function mfpluswpml_delete_extras($postId) {
   global $flag,$wpdb;
+
+
+  //when the translation come from the translation panel and not from the post page we no need delete extra values
+  if( !empty($_REQUEST['job_id'])) {
+    return false;
+  }
+
+
   if($flag != 1) {
     return $postId;
   }
@@ -286,7 +294,6 @@ function mfpluswpml_delete_extras($postId) {
     $wpdb->query("DELETE FROM ".$wpdb->prefix."postmeta WHERE meta_id IN (".$meta_id.")");
     $wpdb->query("DELETE FROM ".MF_TABLE_POST_META." WHERE id iN (".$meta_id.")");  
 
-
   }
 }
 
@@ -301,7 +308,7 @@ function mfpluswpml_save_post($postId) {
     $postId = $the_post;
   }
 
-  if(!empty($_REQUEST['rc-custom-write-panel-verify-key'])) {
+  if(!empty($_REQUEST['rc-custom-write-panel-verify-key']) && empty($_REQUEST['icl_tm_action'])) {
 	  //the user  can edit posts?
 		if (!(current_user_can('edit_posts', $postId) || current_user_can('edit_published_pages', $postId))){
 		  return $postId;
@@ -359,9 +366,18 @@ add_filter('mf_extra_categories','mfwpml_add_categories');
 function mfwpml_add_categories($categories) {
   global $wpdb;
 
-  if( empty($_GET['lang']) || empty($_GET['source_lang']) || empty( $categories ) ) {
+  if( empty($_GET['lang']) || empty($_GET['source_lang']) || empty($_GET['trid']) || !is_numeric($_GET['trid']))  {
     return $categories;
   }
+
+  $pid = $wpdb->get_var("SELECT element_id FROM {$wpdb->prefix}icl_translations WHERE trid={$_GET['trid']}");
+  $tmp = $wpdb->get_results("SELECT term_taxonomy_id FROM {$wpdb->prefix}term_relationships WHERE object_id = {$pid}");
+
+  foreach($tmp as $key => $item ){
+    $cat[] = $item->term_taxonomy_id;
+  }
+
+  $categories = $cat;
 
   $lang = $_GET['lang'];
   $source_lang = $_GET['source_lang'];
@@ -392,3 +408,61 @@ function mfwpml_add_categories($categories) {
 
   return $categories;
 }
+
+
+/** Fix for the translations queue **/
+add_action('mfwpml_sync_queue','mfwpml_sync_on_queue', 10, 2);
+function mfwpml_sync_on_queue( $source_post, $translated_post_id ) {
+  global $wpdb;
+
+  //Getting the writepanel who belongs this posts
+  $write_panel_id =  $wpdb->get_var("SELECT meta_value FROM {$wpdb->prefix}postmeta WHERE meta_key = '_mf_write_panel_id' and post_id = ".$source_post->ID);
+  if( is_null($write_panel_id) ) {
+    //if not have write_panel_id is because this post don't belongs to a write panel
+    //and not have sense continue translating custom fields
+    return true;
+  }
+  
+
+  //Getting the custom fields values of the original post
+  $values = $wpdb->get_results("SELECT 
+      mfp.group_count,
+      mfp.field_count,
+      mfp.post_id,
+      mfp.field_name,
+      mfp.order_id,
+      wpp.meta_id,
+      wpp.meta_key,
+      wpp.meta_value
+    FROM 
+      {$wpdb->prefix}mf_post_meta as mfp 
+    LEFT JOIN 
+      {$wpdb->prefix}postmeta as wpp ON ( mfp.id = wpp.meta_id )  
+    WHERE 
+      mfp.post_id = {$source_post->ID};
+  ",ARRAY_A
+  );
+
+
+  //Linking the translated post with the right write panel
+  add_post_meta($translated_post_id,'_mf_write_panel_id',$write_panel_id);
+
+  //Inserting the new values
+  foreach( $values as $key => $value ) {
+    add_post_meta($translated_post_id, $value['meta_key'], $value['meta_value']);
+		$meta_id = $wpdb->insert_id;
+
+    $query = "INSERT INTO ".MF_TABLE_POST_META."
+      VALUES (
+        {$meta_id},
+        {$value['group_count']},
+        {$value['field_count']},
+        $translated_post_id,
+        '{$value['field_name']}',
+        {$value['order_id']}
+      )";
+
+    $wpdb->query($query);    
+  }
+}
+/** / Fix for the translations queue **/
